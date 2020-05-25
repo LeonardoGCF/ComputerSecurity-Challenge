@@ -1,0 +1,33 @@
+from flask import Flask, render_template, request
+import os
+
+app = Flask(__name__)
+
+FILE_SYSTEM_ROOT = './books'
+bookList = sorted(os.listdir(FILE_SYSTEM_ROOT))
+
+def next_page(page):
+	return page[:-1] + chr(ord(page[-1]) + 1)
+
+@app.route('/reader/<path:book>')
+def reader(book):
+	page = request.args.get('page', default = '1')
+	if book not in bookList:
+		return 'We don\'t have this book yet, stay tuned.<p><a href="/">home</a></p>'
+	if page > '5':
+		return 'Hey, consider that as a free trial. We are still developing our business plan!<p><a href="/">home</a></p>'
+	file = os.path.join(FILE_SYSTEM_ROOT, book, page)
+	with open(file, 'r') as f:
+		content = f.read()
+	return render_template('reader.html', content=content, book=book, next_page=next_page(page))
+
+@app.route('/')
+def home():
+	return render_template('home.html', bookList=bookList)
+
+if __name__ == '__main__':
+	app.run(host="0.0.0.0")
+
+
+
+    

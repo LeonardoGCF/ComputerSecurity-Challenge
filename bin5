@@ -1,0 +1,113 @@
+pwndbg> disassemble main
+Dump of assembler code for function main:
+   0x080485fb <+0>:	lea    ecx,[esp+0x4]
+   0x080485ff <+4>:	and    esp,0xfffffff0
+   0x08048602 <+7>:	push   DWORD PTR [ecx-0x4]
+   0x08048605 <+10>:	push   ebp
+   0x08048606 <+11>:	mov    ebp,esp
+   0x08048608 <+13>:	push   edi
+   0x08048609 <+14>:	push   esi
+   0x0804860a <+15>:	push   ebx
+   0x0804860b <+16>:	push   ecx
+   0x0804860c <+17>:	sub    esp,0xf8                                     f8 ==
+   0x08048612 <+23>:	mov    eax,gs:0x14
+   0x08048618 <+29>:	mov    DWORD PTR [ebp-0x1c],eax
+   0x0804861b <+32>:	xor    eax,eax
+   0x0804861d <+34>:	mov    DWORD PTR [ebp-0xf0],0x0
+   0x08048627 <+44>:	mov    DWORD PTR [ebp-0xec],0x8048800
+   0x08048631 <+54>:	lea    edx,[ebp-0xe8]
+   0x08048637 <+60>:	mov    eax,0x0
+   0x0804863c <+65>:	mov    ecx,0x33
+   0x08048641 <+70>:	mov    edi,edx
+   0x08048643 <+72>:	rep stos DWORD PTR es:[edi],eax
+   0x08048645 <+74>:	mov    DWORD PTR [ebp-0x28],0x8048807
+   0x0804864c <+81>:	mov    DWORD PTR [ebp-0x24],0x804881c
+   0x08048653 <+88>:	mov    DWORD PTR [ebp-0x20],0x8048844
+   0x0804865a <+95>:	sub    esp,0x4
+   0x0804865d <+98>:	lea    eax,[ebp-0xe8]
+   0x08048663 <+104>:	push   eax
+   0x08048664 <+105>:	call   0x804856b <encrypt_ptr>
+   0x08048669 <+110>:	add    esp,0x8
+   0x0804866c <+113>:	sub    esp,0x8
+   0x0804866f <+116>:	push   0x80488b5
+   0x08048674 <+121>:	push   DWORD PTR [ebp-0xec]
+
+
+   0x0804867a <+127>:	call   0x8048430 <fopen@plt>                            打开文件
+   0x0804867f <+132>:	add    esp,0x10
+   0x08048682 <+135>:	mov    DWORD PTR [ebp-0xf0],eax
+   0x08048688 <+141>:	cmp    DWORD PTR [ebp-0xf0],0x0
+
+   0x0804868f <+148>:	jne    0x80486ca <main+207>                              jump to 207
+   0x08048691 <+150>:	mov    eax,DWORD PTR [ebp-0x28]
+   0x08048694 <+153>:	cdq
+   0x08048695 <+154>:	mov    esi,eax
+   0x08048697 <+156>:	xor    esi,0xea105908
+   0x0804869d <+162>:	mov    DWORD PTR [ebp-0x100],esi
+   0x080486a3 <+168>:	mov    eax,edx
+   0x080486a5 <+170>:	xor    ah,0x0
+   0x080486a8 <+173>:	mov    DWORD PTR [ebp-0xfc],eax
+   0x080486ae <+179>:	mov    eax,DWORD PTR [ebp-0x100]
+   0x080486b4 <+185>:	sub    esp,0xc
+   0x080486b7 <+188>:	push   eax
+   0x080486b8 <+189>:	call   0x8048400 <puts@plt>                                  puts
+   0x080486bd <+194>:	add    esp,0x10
+   0x080486c0 <+197>:	sub    esp,0xc
+   0x080486c3 <+200>:	push   0xffffffff
+   0x080486c5 <+202>:	call   0x8048410 <exit@plt>                                   exit
+
+   0x080486ca <+207>:	push   DWORD PTR [ebp-0xf0]
+
+
+   0x080486d0 <+213>:	push   0x1
+   0x080486d2 <+215>:	push   0x400
+   0x080486d7 <+220>:	push   0x804a060
+   0x080486dc <+225>:	call   0x80483f0 <fread@plt>                                fread
+   0x080486e1 <+230>:	add    esp,0x10
+   0x080486e4 <+233>:	sub    esp,0xc
+   0x080486e7 <+236>:	push   0x80488b8
+   0x080486ec <+241>:	call   0x8048400 <puts@plt>                                 puts
+   0x080486f1 <+246>:	add    esp,0x10
+   0x080486f4 <+249>:	sub    esp,0x8
+   0x080486f7 <+252>:	lea    eax,[ebp-0xe8]
+   0x080486fd <+258>:	push   eax
+   0x080486fe <+259>:	push   0x80488c8
+   0x08048703 <+264>:	call   0x8048440 <__isoc99_scanf@plt>                       __isoc99_scanf
+
+   0x08048708 <+269>:	add    esp,0x10
+   0x0804870b <+272>:	sub    esp,0x4
+   0x0804870e <+275>:	push   0x400
+   0x08048713 <+280>:	push   0x804a060
+   0x08048718 <+285>:	lea    eax,[ebp-0xe8]
+   0x0804871e <+291>:	push   eax
+   0x0804871f <+292>:	call   0x8048450 <strncmp@plt>                              strncmp
+
+   0x08048724 <+297>:	add    esp,0x10
+   0x08048727 <+300>:	test   eax,eax
+   0x08048729 <+302>:	jne    0x8048742 <main+327>
+   0x0804872b <+304>:	sub    esp,0x8
+   0x0804872e <+307>:	push   0x804a060
+   0x08048733 <+312>:	push   0x80488cc
+   0x08048738 <+317>:	call   0x80483e0 <printf@plt>                                  printf
+   0x0804873d <+322>:	add    esp,0x10
+   0x08048740 <+325>:	jmp    0x804876a <main+367>
+   0x08048742 <+327>:	mov    eax,DWORD PTR [ebp-0x20]
+   0x08048745 <+330>:	cdq
+   0x08048746 <+331>:	mov    ecx,eax
+   0x08048748 <+333>:	xor    ecx,0xea105908
+   0x0804874e <+339>:	mov    ebx,ecx
+   0x08048750 <+341>:	mov    eax,edx
+   0x08048752 <+343>:	xor    ah,0x0
+   0x08048755 <+346>:	mov    esi,eax
+   0x08048757 <+348>:	mov    eax,ebx
+   0x08048759 <+350>:	sub    esp,0x8
+   0x0804875c <+353>:	push   eax
+   0x0804875d <+354>:	push   0x80488ed
+   0x08048762 <+359>:	call   0x80483e0 <printf@plt>                                 printf
+   0x08048767 <+364>:	add    esp,0x10
+   0x0804876a <+367>:	sub    esp,0xc
+   0x0804876d <+370>:	push   0x0
+   0x0804876f <+372>:	call   0x8048410 <exit@plt>                                 exit
+End of assembler dump.
+
+

